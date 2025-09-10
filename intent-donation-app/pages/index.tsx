@@ -4,22 +4,25 @@ import { ethers } from "ethers";
 import toast from "react-hot-toast";
 import Image from "next/image";
 
-
- interface ChainInfo {
-  chain: {
-    name: string;
-    nativeSymbol: string;
-    chainIdHex: string;
-  };
-  estimatedCost: string | number | bigint | ethers.BigNumber;
+// tipe untuk chain
+interface ChainInfo {
+  name: string;
+  nativeSymbol: string;
+  chainIdHex: string;
+  rpcUrl: string;
+  blockExplorerUrl: string;
 }
 
+interface CheapestChain {
+  chain: ChainInfo;
+  estimatedCost: bigint;
+  gasPrice: bigint;
+}
 
 // tipe ethereum provider
 interface EthereumProvider {
   request: (args: { method: string; params?: Array<unknown> }) => Promise<unknown>;
 }
-
 declare global {
   interface Window {
     ethereum?: EthereumProvider;
@@ -28,10 +31,50 @@ declare global {
 
 export default function Home() {
   const [wallet, setWallet] = useState<string | null>(null);
-  const [cheapest, setCheapest] = useState<ChainInfo | null>(null);
+  const [cheapest, setCheapest] = useState<CheapestChain | null>(null);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // 🟢 Fungsi untuk switch chain
+  const switchToChain = async (chainHex: string, chainData?: ChainInfo) => {
+    try {
+      await window.ethereum?.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: chainHex }],
+      });
+      return true;
+    } catch (err: unknown) {
+      if ((err as { code?: number }).code === 4902 && chainData) {
+        try {
+          await window.ethereum?.request({
+            method: "wallet_addEthereumChain",
+            params: [
+              {
+                chainId: chainHex,
+                chainName: chainData.name,
+                nativeCurrency: {
+                  name: chainData.nativeSymbol,
+                  symbol: chainData.nativeSymbol,
+                  decimals: 18,
+                },
+                rpcUrls: [chainData.rpcUrl],
+                blockExplorerUrls: [chainData.blockExplorerUrl],
+              },
+            ],
+          });
+          return true;
+        } catch (addErr) {
+          console.error("Failed to add chain:", addErr);
+          toast.error("Failed to add chain to MetaMask");
+        }
+      } else {
+        console.error(err);
+        toast.error("Failed to switch chain");
+      }
+      return false;
+    }
+  };
 
   const connectWallet = async () => {
     if (!window.ethereum) return toast.error("MetaMask not found!");
@@ -65,46 +108,6 @@ export default function Home() {
     }
   };
 
-const switchToChain = async (chainHex: string, chainData?: any) => {
-  try {
-    await (window as any).ethereum.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId: chainHex }],
-    });
-    return true;
-  } catch (err: any) {
-    if (err.code === 4902 && chainData) {
-      try {
-        await (window as any).ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId: chainHex,
-              chainName: chainData.name,
-              nativeCurrency: {
-                name: chainData.nativeName,
-                symbol: chainData.nativeSymbol,
-                decimals: 18,
-              },
-              rpcUrls: [chainData.rpc],
-              blockExplorerUrls: [chainData.explorer],
-            },
-          ],
-        });
-        return true;
-      } catch (addErr) {
-        console.error("Failed to add chain:", addErr);
-        toast.error("Failed to add chain to MetaMask");
-      }
-    } else {
-      console.error(err);
-      toast.error("Failed to switch chain");
-    }
-    return false;
-  }
-};
-
-
   const handleDonate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!wallet) return toast.error("Connect wallet first");
@@ -114,7 +117,8 @@ const switchToChain = async (chainHex: string, chainData?: any) => {
     setBusy(true);
     toast.loading("Processing donation...");
     try {
-      const ok = await switchToChain(cheapest.chain.chainIdHex);
+      // 🟢 switch chain dulu
+      const ok = await switchToChain(cheapest.chain.chainIdHex, cheapest.chain);
       if (!ok) return setBusy(false);
 
       if (!window.ethereum) return toast.error("MetaMask not found!");
@@ -200,9 +204,7 @@ const switchToChain = async (chainHex: string, chainData?: any) => {
 
             <input
               type="number"
-              placeholder={`Amount (${
-                cheapest ? cheapest.chain.nativeSymbol : "XAI"
-              })`}
+              placeholder={`Amount (${cheapest ? cheapest.chain.nativeSymbol : "ETH"})`}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="w-full h-12 px-4 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-purple-400 focus:outline-none"

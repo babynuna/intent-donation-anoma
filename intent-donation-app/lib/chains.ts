@@ -108,14 +108,6 @@ export const CHAINS: ChainInfo[] = [
     nativeSymbol: "MON",
     blockExplorerUrl: "https://explorer.monad.xyz",
   },
-  {
-    name: "Rise Testnet",
-    chainId: 1918988905,
-    chainIdHex: "0x72697365",
-    rpcUrl: `https://rise-testnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
-    nativeSymbol: "ETH",
-    blockExplorerUrl: "https://explorer.risetest.io",
-  },
 ];
 
 //
