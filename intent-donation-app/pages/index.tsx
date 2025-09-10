@@ -4,15 +4,16 @@ import { ethers } from "ethers";
 import toast from "react-hot-toast";
 import Image from "next/image";
 
-// tipe untuk chain info
-interface ChainInfo {
+
+ interface ChainInfo {
   chain: {
     name: string;
     nativeSymbol: string;
     chainIdHex: string;
   };
-  estimatedCost: string | number | ethers.BigNumber;
+  estimatedCost: string | number | bigint | ethers.BigNumber;
 }
+
 
 // tipe ethereum provider
 interface EthereumProvider {
