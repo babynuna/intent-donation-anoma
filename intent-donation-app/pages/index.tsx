@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getCheapestChain } from "@/lib/chains";
+import { getCheapestChain } from "../lib/chains";
 import { ethers } from "ethers";
 import toast from "react-hot-toast";
 import Image from "next/image";
