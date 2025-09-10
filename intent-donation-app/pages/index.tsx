@@ -65,24 +65,45 @@ export default function Home() {
     }
   };
 
-  const switchToChain = async (chainHex: string) => {
-    if (!window.ethereum) return false;
-    try {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: chainHex }],
-      });
-      return true;
-    } catch (err: unknown) {
-      if (typeof err === "object" && err && "code" in err) {
-        if ((err as { code: number }).code === 4902) {
-          toast.error("Chain not found in wallet. Add it manually.");
-        }
+const switchToChain = async (chainHex: string, chainData?: any) => {
+  try {
+    await (window as any).ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: chainHex }],
+    });
+    return true;
+  } catch (err: any) {
+    if (err.code === 4902 && chainData) {
+      try {
+        await (window as any).ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: chainHex,
+              chainName: chainData.name,
+              nativeCurrency: {
+                name: chainData.nativeName,
+                symbol: chainData.nativeSymbol,
+                decimals: 18,
+              },
+              rpcUrls: [chainData.rpc],
+              blockExplorerUrls: [chainData.explorer],
+            },
+          ],
+        });
+        return true;
+      } catch (addErr) {
+        console.error("Failed to add chain:", addErr);
+        toast.error("Failed to add chain to MetaMask");
       }
+    } else {
       console.error(err);
-      return false;
+      toast.error("Failed to switch chain");
     }
-  };
+    return false;
+  }
+};
+
 
   const handleDonate = async (e: React.FormEvent) => {
     e.preventDefault();
